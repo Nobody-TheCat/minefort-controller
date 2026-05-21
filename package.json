@@ -1,0 +1,17 @@
+{
+  "name": "minefort-controller",
+  "version": "1.0.0",
+  "description": "Minefort Server Controller - Start your Minecraft server with one click",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build completed'",
+    "start": "node api/start-server.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^21.0.0",
+    "@sparticuz/chromium": "^119.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
