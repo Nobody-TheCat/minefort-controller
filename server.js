@@ -14,23 +14,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware di logging per TUTTE le richieste
+// Middleware di logging
 app.use((req, res, next) => {
   console.log(`📍 ${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// Middleware
+// Middleware JSON
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
-// Serve index.html per la root
-app.get('/', (req, res) => {
-  console.log('📄 Serving index.html');
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// ============ ROTTE API (PRIMA dei file statici!) ============
 
-// API endpoint per accendere il server
 app.post('/api/start-server', async (req, res) => {
   console.log('📨 RICHIESTA POST RICEVUTA!');
   console.log('   Body:', JSON.stringify(req.body));
@@ -178,6 +172,15 @@ app.post('/api/start-server', async (req, res) => {
       error: error.message || 'Failed to start server'
     });
   }
+});
+
+// ============ FILE STATICI (DOPO le API!) ============
+app.use(express.static(path.join(__dirname)));
+
+// Serve index.html per la root
+app.get('/', (req, res) => {
+  console.log('📄 Serving index.html');
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Catch-all per 404
