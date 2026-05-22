@@ -6,18 +6,26 @@ const cheerio = require('cheerio');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware di logging per TUTTE le richieste
+app.use((req, res, next) => {
+  console.log(`📍 ${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // Serve index.html per la root
 app.get('/', (req, res) => {
+  console.log('📄 Serving index.html');
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // API endpoint per accendere il server
 app.post('/api/start-server', async (req, res) => {
-  console.log('📨 Richiesta ricevuta!');
+  console.log('📨 RICHIESTA POST RICEVUTA!');
+  console.log('   Body:', JSON.stringify(req.body));
   
   const email = process.env.MINEFORT_EMAIL;
   const password = process.env.MINEFORT_PASSWORD;
@@ -99,7 +107,7 @@ app.post('/api/start-server', async (req, res) => {
       const href = $(elem).attr('href');
       const onclick = $(elem).attr('onclick');
       
-      foundButtons.push(text.substring(0, 50)); // Primi 50 caratteri
+      foundButtons.push(text.substring(0, 50));
       
       if (text.toLowerCase().includes('wake')) {
         wakeUrl = href || onclick;
@@ -160,6 +168,12 @@ app.post('/api/start-server', async (req, res) => {
       error: error.message || 'Failed to start server'
     });
   }
+});
+
+// Catch-all per 404
+app.use((req, res) => {
+  console.log('⚠️ 404 Not Found:', req.method, req.path);
+  res.status(404).json({ error: 'Not found' });
 });
 
 // Start server
