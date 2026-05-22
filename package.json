@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "node-fetch": "^2.7.0",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^0.22.0"
   },
   "engines": {
     "node": "18.x"
