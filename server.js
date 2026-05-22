@@ -111,11 +111,11 @@ app.post('/api/start-server', async (req, res) => {
       
       foundButtons.push(text.substring(0, 50));
       
-      if (text.toLowerCase().includes('wake')) {
+      if (text.toLowerCase().includes('Wake')) {
         wakeUrl = href || onclick;
         console.log('  ✅ Trovato bottone WAKE:', text.substring(0, 30));
       }
-      if (text.toLowerCase().includes('start')) {
+      if (text.toLowerCase().includes('Start')) {
         startUrl = href || onclick;
         console.log('  ✅ Trovato bottone START:', text.substring(0, 30));
       }
