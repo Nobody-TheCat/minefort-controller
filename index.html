@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 Minefort Server Control</title>
+    <title>🎮 Minecraft Server Control</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, rgb(255, 205, 0) 0%, rgb(220, 175, 0) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -28,6 +28,18 @@
             padding: 40px;
             max-width: 500px;
             width: 100%;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .header {
@@ -38,11 +50,18 @@
         .header h1 {
             font-size: 32px;
             margin-bottom: 10px;
-            color: #1e3c72;
+            color: rgb(207, 166, 0);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
+        }
+
+        .header-image {
+            width: 40px;
+            height: 40px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
         .header p {
@@ -101,7 +120,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            background: linear-gradient(135deg, rgb(207, 166, 0) 0%, rgb(177, 136, 0) 100%);
             color: white;
         }
 
@@ -215,12 +234,34 @@
             }
         }
     </style>
+
+<style>
+.btn-primary{
+    background: linear-gradient(135deg,rgb(207,166,0) 0%,rgb(177,136,0) 100%) !important;
+    color:white;
+    box-shadow:
+        0 10px 25px rgba(207,166,0,.35),
+        0 0 20px rgba(207,166,0,.15);
+    transition:transform .25s ease,box-shadow .25s ease,filter .25s ease;
+}
+.btn-primary:hover:not(:disabled){
+    transform:translateY(-2px);
+    filter:brightness(1.12);
+    box-shadow:
+        0 15px 35px rgba(207,166,0,.45),
+        0 0 40px rgba(207,166,0,.30);
+}
+</style>
+
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Minefort Control</h1>
-            <p>Accendi il tuo server Minecraft</p>
+            <h1>
+                🎮 Therians Server
+                <img src="nobodyhead.png" alt="Minecraft Head" class="header-image">
+            </h1>
+            <p>Powered by ΝϴᏴϴᎠᎽ_</p>
         </div>
 
         <button class="btn btn-primary big-button" id="startBtn" onclick="startServer()">
@@ -228,10 +269,6 @@
         </button>
 
         <div class="status hidden" id="status"></div>
-
-        <div class="info-box">
-            <strong>info utilizzo:</strong> clicca il bottone e accendi il server!
-        </div>
     </div>
 
     <script>
