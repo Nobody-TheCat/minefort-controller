@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Minefort Server Controller - Start your Minecraft server with one click",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Build completed'",
-    "start": "node api/start-server.js"
+    "dev": "node server.js",
+    "start": "node server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "node-fetch": "^2.7.0",
     "cheerio": "^0.22.0"
   },
