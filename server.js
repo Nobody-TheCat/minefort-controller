@@ -6,6 +6,14 @@ const cheerio = require('cheerio');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS Headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 // Middleware di logging per TUTTE le richieste
 app.use((req, res, next) => {
   console.log(`📍 ${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -120,7 +128,9 @@ app.post('/api/start-server', async (req, res) => {
     });
     
     console.log('📋 Bottoni trovati totali:', foundButtons.length);
-    console.log('   Primi 5:', foundButtons.slice(0, 5));
+    if (foundButtons.length > 0) {
+      console.log('   Tutti:', foundButtons.join(', '));
+    }
 
     console.log('⚡ Step 5: Invio richiesta WAKE...');
     if (wakeUrl && wakeUrl.startsWith('http')) {
