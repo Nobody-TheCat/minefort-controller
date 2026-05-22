@@ -8,8 +8,8 @@
     "start": "node api/start-server.js"
   },
   "dependencies": {
-    "puppeteer-core": "^21.0.0",
-    "@sparticuz/chromium": "^119.0.0"
+    "node-fetch": "^2.7.0",
+    "cheerio": "^1.0.0-rc.12"
   },
   "engines": {
     "node": "18.x"
