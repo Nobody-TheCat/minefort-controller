@@ -1,7 +1,7 @@
-import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -78,12 +78,6 @@ export default async function handler(req, res) {
       }
     });
 
-    // Try alternative: look for API endpoints or form submissions
-    const scripts = $('script').text();
-    if (scripts.includes('wake')) {
-      // Server might use API calls
-    }
-
     // 5. Send wake request (if we found it)
     if (wakeUrl && wakeUrl.startsWith('http')) {
       await fetch(wakeUrl, {
@@ -120,4 +114,4 @@ export default async function handler(req, res) {
       error: error.message || 'Failed to start server'
     });
   }
-}
+};
