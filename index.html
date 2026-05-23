@@ -220,6 +220,18 @@
             line-height: 1.5;
         }
 
+        .setup-box {
+            background: #f0f7ff;
+            border-left: 4px solid #207bff;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            display: none;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 25px;
@@ -235,23 +247,87 @@
         }
     </style>
 
-<style>
-.btn-primary{
-    background: linear-gradient(135deg,rgb(207,166,0) 0%,rgb(177,136,0) 100%) !important;
-    color:white;
-    box-shadow:
-        0 10px 25px rgba(207,166,0,.35),
-        0 0 20px rgba(207,166,0,.15);
-    transition:transform .25s ease,box-shadow .25s ease,filter .25s ease;
-}
-.btn-primary:hover:not(:disabled){
-    transform:translateY(-2px);
-    filter:brightness(1.12);
-    box-shadow:
-        0 15px 35px rgba(207,166,0,.45),
-        0 0 40px rgba(207,166,0,.30);
-}
-</style>
+    <style>
+        .btn-primary{
+            background: linear-gradient(135deg,rgb(207,166,0) 0%,rgb(177,136,0) 100%) !important;
+            color:white;
+            box-shadow:
+                0 10px 25px rgba(207,166,0,.35),
+                0 0 20px rgba(207,166,0,.15);
+            transition:transform .25s ease,box-shadow .25s ease,filter .25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+            border-radius: 10px;
+            opacity: 0;
+            animation: starBorder 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: conic-gradient(from 0deg, 
+                rgba(255,255,255,0) 0deg,
+                rgba(255,255,255,0.8) 90deg,
+                rgba(255,255,255,0) 180deg);
+            border-radius: 10px;
+            opacity: 0;
+            animation: starBorderRotate 3s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes starBorder {
+            0%, 100% {
+                opacity: 0;
+                box-shadow: 
+                    0 0 10px rgba(207,166,0,0),
+                    0 0 20px rgba(207,166,0,0);
+            }
+            50% {
+                opacity: 1;
+                box-shadow: 
+                    0 0 15px rgba(207,166,0,0.6),
+                    0 0 30px rgba(207,166,0,0.3);
+            }
+        }
+
+        @keyframes starBorderRotate {
+            0% {
+                transform: rotate(0deg);
+                opacity: 0;
+            }
+            25% {
+                opacity: 0.6;
+            }
+            50% {
+                opacity: 1;
+            }
+            75% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .btn-primary:hover:not(:disabled){
+            transform:translateY(-2px);
+            filter:brightness(1.12);
+            box-shadow:
+                0 15px 35px rgba(207,166,0,.45),
+                0 0 40px rgba(207,166,0,.30),
+                0 0 60px rgba(207,166,0,.2);
+        }
+    </style>
 
 </head>
 <body>
@@ -264,14 +340,25 @@
             <p>Powered by ΝϴᏴϴᎠᎽ_</p>
         </div>
 
-        <button class="btn btn-primary big-button" id="startBtn" onclick="startServer()">
+        <div id="setupBox" class="setup-box">
+            <strong>⚙️ Autenticazione richiesta</strong><br>
+            Clicca il bottone per autenticarti con Minefort, poi ritorna qui!
+        </div>
+
+        <button class="btn btn-primary big-button" id="startBtn" onclick="startServer()" style="display: none;">
             ⚡ ACCENDI SERVER
+        </button>
+
+        <button class="btn btn-primary big-button" id="setupBtn" onclick="setupAuth()" style="display: none;">
+            ⚙️ AUTENTICA SU MINEFORT
         </button>
 
         <div class="status hidden" id="status"></div>
     </div>
 
     <script>
+        let isAuthenticated = false;
+
         function showStatus(message, type = 'loading') {
             const statusEl = document.getElementById('status');
             statusEl.className = `status ${type}`;
@@ -287,6 +374,59 @@
             statusEl.className = 'status hidden';
         }
 
+        function updateAuthUI() {
+            const startBtn = document.getElementById('startBtn');
+            const setupBtn = document.getElementById('setupBtn');
+            const setupBox = document.getElementById('setupBox');
+
+            if (isAuthenticated) {
+                startBtn.style.display = 'block';
+                setupBtn.style.display = 'none';
+                setupBox.style.display = 'none';
+                startBtn.disabled = false;
+            } else {
+                startBtn.style.display = 'none';
+                setupBtn.style.display = 'block';
+                setupBox.style.display = 'block';
+                hideStatus();
+            }
+        }
+
+        async function setupAuth() {
+            const loginWindow = window.open('https://minefort.com/login', 'MinefortLogin', 'width=800,height=600');
+            
+            const checkInterval = setInterval(async () => {
+                if (loginWindow.closed) {
+                    clearInterval(checkInterval);
+                    
+                    showStatus('🔍 Verifica autenticazione...', 'loading');
+                    
+                    try {
+                        const response = await fetch('/api/verify-auth', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({})
+                        });
+
+                        const data = await response.json();
+
+                        if (data.authenticated) {
+                            isAuthenticated = true;
+                            showStatus('✅ Autenticazione riuscita!', 'success');
+                            setTimeout(() => {
+                                hideStatus();
+                                updateAuthUI();
+                            }, 2000);
+                        } else {
+                            showStatus('❌ Autenticazione non riuscita. Riprova!', 'error');
+                        }
+                    } catch (error) {
+                        showStatus(`❌ Errore: ${error.message}`, 'error');
+                    }
+                }
+            }, 2000);
+        }
+
         async function startServer() {
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
@@ -299,7 +439,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({}), // No credentials needed - backend has them
+                    body: JSON.stringify({}),
                 });
 
                 const data = await response.json();
@@ -307,7 +447,7 @@
                 if (data.success) {
                     showStatus('✅ Server acceso! 🚀 Dovrebbe essere online tra 30-60 secondi.', 'success');
                 } else {
-                    showStatus(`❌ Errore: ${data.error || 'Qualcosa è andato storto'}`, 'error');
+                    showStatus(`❌ ${data.error || 'Errore sconosciuto'}`, 'error');
                 }
             } catch (error) {
                 showStatus(`❌ Errore di connessione: ${error.message}`, 'error');
@@ -316,43 +456,43 @@
             }
         }
 
-        function clearForm() {
-            hideStatus();
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/check-auth');
+                const data = await response.json();
+                isAuthenticated = data.authenticated;
+                updateAuthUI();
+            } catch (error) {
+                updateAuthUI();
+            }
         }
 
-        // Allow Enter key to submit
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                startServer();
-            }
-        });
+        checkAuth();
     </script>
-  <script>
-if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
 
-    const cursor = document.createElement("img");
-    cursor.src = "Minecraft Enchanted Diamond Axe--pointer--SweezyCursors.png";
-    cursor.className = "custom-cursor";
+    <script>
+        if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+            const cursor = document.createElement("img");
+            cursor.src = "Minecraft Enchanted Diamond Axe--pointer--SweezyCursors.png";
+            cursor.className = "custom-cursor";
 
-    cursor.style.position = "fixed";
-    cursor.style.width = "24px";
-    cursor.style.height = "24px";
-    cursor.style.pointerEvents = "none";
-    cursor.style.zIndex = "999999";
-    cursor.style.imageRendering = "pixelated";
+            cursor.style.position = "fixed";
+            cursor.style.width = "24px";
+            cursor.style.height = "24px";
+            cursor.style.pointerEvents = "none";
+            cursor.style.zIndex = "999999";
+            cursor.style.imageRendering = "pixelated";
 
-    document.body.appendChild(cursor);
+            document.body.appendChild(cursor);
+            document.documentElement.style.cursor = "none";
 
-    document.documentElement.style.cursor = "none";
-
-    document.addEventListener("mousemove", (e) => {
-        cursor.style.left = e.clientX + "px";
-        cursor.style.top = e.clientY + "px";
-    });
-
-} else {
-    document.documentElement.style.cursor = "auto";
-}
-</script>
+            document.addEventListener("mousemove", (e) => {
+                cursor.style.left = e.clientX + "px";
+                cursor.style.top = e.clientY + "px";
+            });
+        } else {
+            document.documentElement.style.cursor = "auto";
+        }
+    </script>
 </body>
 </html>
