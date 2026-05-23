@@ -1,5 +1,30 @@
 <!DOCTYPE html>
 <html lang="it">
+<style>
+* {
+  cursor: none !important;
+}
+
+.custom-cursor{
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  z-index: 999999;
+  image-rendering: pixelated;
+}
+</style>
+
+<img src="Minecraft Enchanted Diamond Axe--pointer--SweezyCursors.png" class="custom-cursor" id="cursor">
+
+<script>
+const cursor = document.getElementById('cursor');
+
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
