@@ -10,6 +10,21 @@ const PORT = process.env.PORT || 3000;
 let authCookies = null;
 let loginError = null;
 
+// Browser Headers realistici per bypassare Cloudflare
+const browserHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'DNT': '1',
+  'Connection': 'keep-alive',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Cache-Control': 'max-age=0'
+};
+
 // CORS Headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -40,19 +55,20 @@ async function doLogin() {
 
     const loginPageRes = await fetch('https://minefort.com/login', {
       method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      }
+      headers: browserHeaders
     });
+
+    console.log(`   Status pagina login: ${loginPageRes.status}`);
 
     const cookies = loginPageRes.headers.raw()['set-cookie'] || [];
     const cookieString = cookies.map(c => c.split(';')[0]).join('; ');
+    console.log(`   Cookies ricevuti: ${cookies.length}`);
 
     const loginRes = await fetch('https://minefort.com/login', {
       method: 'POST',
       headers: {
+        ...browserHeaders,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Cookie': cookieString,
         'Referer': 'https://minefort.com/login'
       },
@@ -62,6 +78,8 @@ async function doLogin() {
       }),
       redirect: 'follow'
     });
+
+    console.log(`   Status login response: ${loginRes.status}`);
 
     const loginCookies = loginRes.headers.raw()['set-cookie'] || [];
     authCookies = [...cookies, ...loginCookies].map(c => c.split(';')[0]).join('; ');
@@ -98,10 +116,12 @@ app.post('/api/start-server', async (req, res) => {
     const serverPageRes = await fetch(serverUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        ...browserHeaders,
         'Cookie': authCookies,
       }
     });
+
+    console.log(`   Status: ${serverPageRes.status}`);
 
     const serverHtml = await serverPageRes.text();
     const $ = cheerio.load(serverHtml);
@@ -145,7 +165,10 @@ app.post('/api/start-server', async (req, res) => {
       console.log('⚡ Invio richiesta WAKE...');
       await fetch(wakeUrl, {
         method: 'POST',
-        headers: { 'Cookie': authCookies }
+        headers: { 
+          ...browserHeaders,
+          'Cookie': authCookies 
+        }
       });
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
@@ -154,7 +177,10 @@ app.post('/api/start-server', async (req, res) => {
       console.log('▶️ Invio richiesta START...');
       await fetch(startUrl, {
         method: 'POST',
-        headers: { 'Cookie': authCookies }
+        headers: { 
+          ...browserHeaders,
+          'Cookie': authCookies 
+        }
       });
     }
 
@@ -174,7 +200,7 @@ app.post('/api/start-server', async (req, res) => {
   }
 });
 
-// ============ ENDPOINT /PREVIEW (pagina controllabile manualmente) ============
+// ============ ENDPOINT /PREVIEW ============
 app.get('/preview', async (req, res) => {
   const serverId = process.env.MINEFORT_SERVER_ID;
 
@@ -218,17 +244,47 @@ app.get('/preview', async (req, res) => {
     const serverPageRes = await fetch(serverUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        ...browserHeaders,
         'Cookie': authCookies,
       }
     });
 
+    console.log(`   Status: ${serverPageRes.status}`);
     const serverHtml = await serverPageRes.text();
+
+    if (serverPageRes.status === 403) {
+      return res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>⚠️ Accesso Negato</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .warning { background: #fff3cd; padding: 20px; border-radius: 8px; color: #856404; border: 1px solid #ffc107; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="warning">
+        <h2>⚠️ Status 403 - Accesso Negato</h2>
+        <p>Minefort sta bloccando le richieste da Node.js (protezione anti-bot di Cloudflare).</p>
+        <p><strong>Cosa puoi fare:</strong></p>
+        <ol>
+            <li>Accedi manualmente a <a href="https://minefort.com" target="_blank">minefort.com</a> dal tuo browser</li>
+            <li>Vai al tuo server</li>
+            <li>Se c'è una verifica anti-bot, completala</li>
+            <li>Poi riprova il nostro sito</li>
+        </ol>
+        <p><a href="/">← Torna</a> | <a href="/preview">🔄 Riprova</a></p>
+    </div>
+</body>
+</html>
+      `);
+    }
+
     console.log('✅ /preview: Pagina caricata con successo!');
 
-    // Restituisci l'HTML PURO della pagina Minefort
-    // In questo modo l'utente vede ESATTAMENTE quello che vede il backend
-    // E può completare anche le verifiche anti-bot manualmente
     res.send(`
 <!DOCTYPE html>
 <html>
@@ -278,7 +334,6 @@ app.get('/preview', async (req, res) => {
         <button onclick="location.href='/'">🏠 Torna</button>
     </div>
     <div class="content">
-        <!-- HTML DELLA PAGINA MINEFORT -->
         ${serverHtml}
     </div>
 </body>
