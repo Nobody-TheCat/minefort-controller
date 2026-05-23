@@ -1,30 +1,5 @@
 <!DOCTYPE html>
 <html lang="it">
-<style>
-* {
-  cursor: none !important;
-}
-
-.custom-cursor{
-  position: fixed;
-  width: 24px;
-  height: 24px;
-  pointer-events: none;
-  z-index: 999999;
-  image-rendering: pixelated;
-}
-</style>
-
-<img src="Minecraft Enchanted Diamond Axe--pointer--SweezyCursors.png" class="custom-cursor" id="cursor">
-
-<script>
-const cursor = document.getElementById('cursor');
-
-document.addEventListener('mousemove', e => {
-  cursor.style.left = e.clientX + 'px';
-  cursor.style.top = e.clientY + 'px';
-});
-</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -352,5 +327,32 @@ document.addEventListener('mousemove', e => {
             }
         });
     </script>
+  <script>
+if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+
+    const cursor = document.createElement("img");
+    cursor.src = "Minecraft Enchanted Diamond Axe--pointer--SweezyCursors.png";
+    cursor.className = "custom-cursor";
+
+    cursor.style.position = "fixed";
+    cursor.style.width = "24px";
+    cursor.style.height = "24px";
+    cursor.style.pointerEvents = "none";
+    cursor.style.zIndex = "999999";
+    cursor.style.imageRendering = "pixelated";
+
+    document.body.appendChild(cursor);
+
+    document.documentElement.style.cursor = "none";
+
+    document.addEventListener("mousemove", (e) => {
+        cursor.style.left = e.clientX + "px";
+        cursor.style.top = e.clientY + "px";
+    });
+
+} else {
+    document.documentElement.style.cursor = "auto";
+}
+</script>
 </body>
 </html>
