@@ -180,6 +180,105 @@ app.post('/api/start-server', async (req, res) => {
   }
 });
 
+// ============ /DEBUG (SEGRETO - NO LINK PUBBLICO) ============
+app.get('/debug', async (req, res) => {
+  const serverId = process.env.MINEFORT_SERVER_ID;
+
+  if (!authCookies) {
+    console.log('Non autenticato su /debug, tentativo login...');
+    await doLogin();
+  }
+
+  try {
+    console.log('📄 /debug: Caricamento pagina Minefort...');
+    const serverUrl = `https://minefort.com/servers/${serverId}/`;
+    const serverPageRes = await fetch(serverUrl, {
+      method: 'GET',
+      headers: { ...browserHeaders, 'Cookie': authCookies }
+    });
+
+    const serverHtml = await serverPageRes.text();
+    console.log(`✅ /debug: Status ${serverPageRes.status}`);
+
+    // Mostra HTML PURO con toolbar segreto
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 DEBUG (Status: ${serverPageRes.status})</title>
+    <style>
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #333;
+            padding: 15px;
+            border-bottom: 2px solid #ff6b6b;
+            z-index: 9999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .toolbar h2 {
+            color: #ff6b6b;
+            margin: 0;
+            display: inline;
+            font-size: 18px;
+        }
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 20px;
+        }
+        button:hover { background: #ff5252; }
+        .content { margin-top: 60px; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h2>🔐 DEBUG MINEFORT (Status: ${serverPageRes.status})</h2>
+        <button onclick="location.href='/'">🏠 Torna</button>
+        <button onclick="location.reload()">🔄 Ricarica</button>
+    </div>
+    <div class="content">
+        ${serverHtml}
+    </div>
+</body>
+</html>
+    `);
+
+  } catch (error) {
+    console.error('❌ /debug error:', error.message);
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Errore Debug</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .error { background: #ff6b6b; color: white; padding: 20px; border-radius: 8px; }
+        a { color: #ff6b6b; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="error">
+        <h2>❌ Errore Debug</h2>
+        <p>${error.message}</p>
+        <p><a href="/">← Torna</a></p>
+    </div>
+</body>
+</html>
+    `);
+  }
+});
+
 // ============ STATIC FILES ============
 app.use(express.static(path.join(__dirname)));
 
