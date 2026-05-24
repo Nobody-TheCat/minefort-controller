@@ -6,11 +6,8 @@ const cheerio = require('cheerio');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Variabili globali
 let authCookies = null;
-let loginError = null;
 
-// Browser Headers realistici
 const browserHeaders = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -25,7 +22,6 @@ const browserHeaders = {
   'Cache-Control': 'max-age=0'
 };
 
-// CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -40,25 +36,15 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// ============ ENDPOINT /API/CHECK-AUTH ============
-app.get('/api/check-auth', (req, res) => {
-  res.json({
-    authenticated: authCookies !== null,
-    hasError: loginError !== null
-  });
-});
-
-// ============ ENDPOINT /API/VERIFY-AUTH ============
-app.post('/api/verify-auth', async (req, res) => {
-  console.log('🔐 Verifica autenticazione...');
-  
+// ============ FUNZIONE LOGIN ============
+async function doLogin() {
   try {
-    // Tenta a loggare con le credenziali
+    console.log('🔐 Login a Minefort...');
     const email = process.env.MINEFORT_EMAIL;
     const password = process.env.MINEFORT_PASSWORD;
 
     if (!email || !password) {
-      return res.json({ authenticated: false, error: 'Credenziali mancanti' });
+      throw new Error('Credenziali mancanti');
     }
 
     const loginPageRes = await fetch('https://minefort.com/login', {
@@ -85,132 +71,205 @@ app.post('/api/verify-auth', async (req, res) => {
     });
 
     const loginCookies = loginRes.headers.raw()['set-cookie'] || [];
-    const newAuthCookies = [...cookies, ...loginCookies].map(c => c.split(';')[0]).join('; ');
-
-    // Testa se il login è valido
-    const testRes = await fetch(`https://minefort.com/servers/${process.env.MINEFORT_SERVER_ID}/`, {
-      method: 'GET',
-      headers: {
-        ...browserHeaders,
-        'Cookie': newAuthCookies,
-      }
-    });
-
-    if (testRes.status === 200 || testRes.status === 403) {
-      // 200 = OK, 403 = Potrebbe essere cloudflare ma con cookie valido
-      authCookies = newAuthCookies;
-      loginError = null;
-      console.log('✅ Autenticazione riuscita!');
-      return res.json({ authenticated: true });
-    } else {
-      console.log(`❌ Autenticazione fallita (status: ${testRes.status})`);
-      return res.json({ authenticated: false, error: `Status ${testRes.status}` });
-    }
-
+    authCookies = [...cookies, ...loginCookies].map(c => c.split(';')[0]).join('; ');
+    
+    console.log('✅ Login riuscito!');
+    return true;
   } catch (error) {
-    console.error('❌ Errore verifica:', error.message);
-    return res.json({ authenticated: false, error: error.message });
+    console.error('❌ Login fallito:', error.message);
+    return false;
   }
-});
+}
 
-// ============ ENDPOINT /API/START-SERVER ============
-app.post('/api/start-server', async (req, res) => {
-  console.log('📨 RICHIESTA START SERVER');
+// ============ ROTTE ============
+
+app.post('/api/wake-server', async (req, res) => {
+  console.log('⚡ WAKE SERVER');
   
   const serverId = process.env.MINEFORT_SERVER_ID;
 
   if (!authCookies) {
     console.log('❌ Non autenticato!');
-    return res.status(500).json({
-      success: false,
-      error: 'Non autenticato. Completa il setup!'
-    });
+    return res.json({ success: false, error: 'Non autenticato' });
   }
 
   try {
-    console.log('📊 Ricerca bottoni...');
     const serverUrl = `https://minefort.com/servers/${serverId}/`;
-    
     const serverPageRes = await fetch(serverUrl, {
       method: 'GET',
-      headers: {
-        ...browserHeaders,
-        'Cookie': authCookies,
-      }
+      headers: { ...browserHeaders, 'Cookie': authCookies }
     });
 
     const serverHtml = await serverPageRes.text();
     const $ = cheerio.load(serverHtml);
 
     let wakeUrl = null;
-    let startUrl = null;
-    let buttonCount = 0;
-    
     $('button, a, [role="button"]').each((i, elem) => {
       const text = $(elem).text().trim().toLowerCase();
       const href = $(elem).attr('href');
       const onclick = $(elem).attr('onclick');
       
-      buttonCount++;
-      
       if (text.includes('wake') || text.includes('risveglia')) {
         wakeUrl = href || onclick;
-        console.log('  ✅ WAKE trovato');
-      }
-      if (text.includes('start') || text.includes('avvia') || text.includes('accendi')) {
-        startUrl = href || onclick;
-        console.log('  ✅ START trovato');
       }
     });
 
-    if (!wakeUrl && !startUrl) {
-      console.log('❌ Bottoni non trovati!');
-      return res.status(200).json({
-        success: false,
-        error: '❌ Bottoni non trovati!'
-      });
+    if (!wakeUrl) {
+      return res.json({ success: false, error: 'Wake button non trovato' });
     }
 
-    if (wakeUrl && wakeUrl.startsWith('http')) {
-      console.log('⚡ WAKE...');
+    if (wakeUrl.startsWith('http')) {
       await fetch(wakeUrl, {
         method: 'POST',
-        headers: { 
-          ...browserHeaders,
-          'Cookie': authCookies 
-        }
-      });
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-
-    if (startUrl && startUrl.startsWith('http')) {
-      console.log('▶️ START...');
-      await fetch(startUrl, {
-        method: 'POST',
-        headers: { 
-          ...browserHeaders,
-          'Cookie': authCookies 
-        }
+        headers: { ...browserHeaders, 'Cookie': authCookies }
       });
     }
 
-    console.log('✅ Completato!');
-    return res.status(200).json({
-      success: true,
-      message: 'Server acceso! 🚀',
-      details: 'Dovrebbe essere online tra 30-60 secondi'
-    });
-
+    res.json({ success: true });
   } catch (error) {
-    console.error('❌ ERRORE:', error.message);
-    return res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('❌ Wake error:', error.message);
+    res.json({ success: false, error: error.message });
   }
 });
 
-// ============ STATIC FILES ============
+app.post('/api/start-server', async (req, res) => {
+  console.log('▶️ START SERVER');
+  
+  const serverId = process.env.MINEFORT_SERVER_ID;
+
+  if (!authCookies) {
+    return res.json({ success: false, error: 'Non autenticato' });
+  }
+
+  try {
+    const serverUrl = `https://minefort.com/servers/${serverId}/`;
+    const serverPageRes = await fetch(serverUrl, {
+      method: 'GET',
+      headers: { ...browserHeaders, 'Cookie': authCookies }
+    });
+
+    const serverHtml = await serverPageRes.text();
+    const $ = cheerio.load(serverHtml);
+
+    let startUrl = null;
+    $('button, a, [role="button"]').each((i, elem) => {
+      const text = $(elem).text().trim().toLowerCase();
+      const href = $(elem).attr('href');
+      const onclick = $(elem).attr('onclick');
+      
+      if (text.includes('start') || text.includes('avvia') || text.includes('accendi')) {
+        startUrl = href || onclick;
+      }
+    });
+
+    if (!startUrl) {
+      return res.json({ success: false, error: 'Start button non trovato' });
+    }
+
+    if (startUrl.startsWith('http')) {
+      await fetch(startUrl, {
+        method: 'POST',
+        headers: { ...browserHeaders, 'Cookie': authCookies }
+      });
+    }
+
+    res.json({ success: true, message: 'Server acceso!' });
+  } catch (error) {
+    console.error('❌ Start error:', error.message);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// ============ /DEBUG ============
+app.get('/debug', async (req, res) => {
+  const serverId = process.env.MINEFORT_SERVER_ID;
+
+  if (!authCookies) {
+    console.log('Non autenticato, tentativo login...');
+    await doLogin();
+  }
+
+  try {
+    console.log('📄 /debug: Caricamento pagina...');
+    const serverUrl = `https://minefort.com/servers/${serverId}/`;
+    const serverPageRes = await fetch(serverUrl, {
+      method: 'GET',
+      headers: { ...browserHeaders, 'Cookie': authCookies }
+    });
+
+    const serverHtml = await serverPageRes.text();
+
+    // Restituisci HTML PURO senza modifiche
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Minefort (Status: ${serverPageRes.status})</title>
+    <style>
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            border-bottom: 2px solid #007bff;
+            z-index: 9999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        button:hover { background: #0056b3; }
+        .content { margin-top: 60px; }
+        h2 { margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h2 style="display: inline; margin-right: 20px;">Debug Minefort (Status: ${serverPageRes.status})</h2>
+        <button onclick="location.href='/'">🏠 Torna</button>
+        <button onclick="location.reload()">🔄 Ricarica</button>
+    </div>
+    <div class="content">
+        ${serverHtml}
+    </div>
+</body>
+</html>
+    `);
+
+  } catch (error) {
+    console.error('❌ /debug error:', error.message);
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Errore</title>
+    <style>body { font-family: Arial; padding: 20px; } .error { color: #c00; }</style>
+</head>
+<body>
+    <div class="error">
+        <h2>❌ Errore</h2>
+        <p>${error.message}</p>
+        <p><a href="/">← Torna</a></p>
+    </div>
+</body>
+</html>
+    `);
+  }
+});
+
+// ============ STATIC ============
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
@@ -218,11 +277,11 @@ app.get('/', (req, res) => {
 });
 
 app.use((req, res) => {
-  console.log('⚠️ 404:', req.method, req.path);
   res.status(404).json({ error: 'Not found' });
 });
 
 // ============ START ============
-app.listen(PORT, () => {
-  console.log(`🎮 Minefort Controller on port ${PORT}`);
+app.listen(PORT, async () => {
+  console.log(`🎮 Server on port ${PORT}`);
+  await doLogin();
 });
