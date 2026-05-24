@@ -81,7 +81,7 @@ async function doLogin() {
   }
 }
 
-// ============ ROTTE ============
+// ============ ROTTE API ============
 
 app.post('/api/wake-server', async (req, res) => {
   console.log('⚡ WAKE SERVER');
@@ -180,96 +180,7 @@ app.post('/api/start-server', async (req, res) => {
   }
 });
 
-// ============ /DEBUG ============
-app.get('/debug', async (req, res) => {
-  const serverId = process.env.MINEFORT_SERVER_ID;
-
-  if (!authCookies) {
-    console.log('Non autenticato, tentativo login...');
-    await doLogin();
-  }
-
-  try {
-    console.log('📄 /debug: Caricamento pagina...');
-    const serverUrl = `https://minefort.com/servers/${serverId}/`;
-    const serverPageRes = await fetch(serverUrl, {
-      method: 'GET',
-      headers: { ...browserHeaders, 'Cookie': authCookies }
-    });
-
-    const serverHtml = await serverPageRes.text();
-
-    // Restituisci HTML PURO senza modifiche
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debug Minefort (Status: ${serverPageRes.status})</title>
-    <style>
-        .toolbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 15px;
-            border-bottom: 2px solid #007bff;
-            z-index: 9999;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        button:hover { background: #0056b3; }
-        .content { margin-top: 60px; }
-        h2 { margin: 0; }
-    </style>
-</head>
-<body>
-    <div class="toolbar">
-        <h2 style="display: inline; margin-right: 20px;">Debug Minefort (Status: ${serverPageRes.status})</h2>
-        <button onclick="location.href='/'">🏠 Torna</button>
-        <button onclick="location.reload()">🔄 Ricarica</button>
-    </div>
-    <div class="content">
-        ${serverHtml}
-    </div>
-</body>
-</html>
-    `);
-
-  } catch (error) {
-    console.error('❌ /debug error:', error.message);
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Errore</title>
-    <style>body { font-family: Arial; padding: 20px; } .error { color: #c00; }</style>
-</head>
-<body>
-    <div class="error">
-        <h2>❌ Errore</h2>
-        <p>${error.message}</p>
-        <p><a href="/">← Torna</a></p>
-    </div>
-</body>
-</html>
-    `);
-  }
-});
-
-// ============ STATIC ============
+// ============ STATIC FILES ============
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
